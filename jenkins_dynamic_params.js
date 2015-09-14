@@ -94,8 +94,8 @@ var STORE_CONFIGURATION_MAP = {};
 
 // Starting point
 jQuery(document).ready(function() {
-	hideScriptPropertiesNames(); // hides the rependencies and script fields
 	setupParametersMap(); // create spec for every param in <paramspec> tag
+	hideScriptPropertiesNames(); // hides the rependencies and script fields
 	setupStoreConfigurationMap();
 	updateDisplayOptions(); /// replaces display name of values in select elements
 	setupDependenciesMap(); // map of all dependencies
@@ -122,6 +122,10 @@ function setupParametersMap() {
 		spec["displayname"] = this.getAttribute("displayname");
 		spec["inappname"] = this.getAttribute("inappname");
 		PARAMETERS_MAP[this.getAttribute("name")] = spec;
+		var hidden = this.getAttribute("hidden");
+		if (hidden && hidden.toString() == "1") {
+			PARAMS_TO_HIDE.push(this.getAttribute("name"));
+		}
 	});
 }
 

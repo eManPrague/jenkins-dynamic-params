@@ -25,10 +25,12 @@ Configuration div example: (without formating for easy copy & paste)
 <presetbutton title="RC" params="BRANCH:RC" ></presetbutton>
 <presetbutton title="HF" params="BRANCH:HF" ></presetbutton>
 
+
 <!-- Params names map -->
 <!-- 'name': name of parameter -->
 <!-- 'displayname': text to be displayed instead -->
 <!-- 'inappname': what to expect to be shown in the app version string -->
+<!-- 'hidden': can be omitted, 1 for hidden, user cannot manipulate the parameter, it's manipulated via script -->
 
 <paramspec name="BRANCH" displayname="Branch" inappname=""></paramspec>
 <paramspec name="EM_BA" displayname="Api backed" inappname="BA"></paramspec>
@@ -40,6 +42,8 @@ Configuration div example: (without formating for easy copy & paste)
 <paramspec name="EM_HA_ID" displayname="Hockey App ID" inappname="HA"></paramspec>
 <paramspec name="EM_HA_DEST" displayname="Hockey App Bundle" inappname=""></paramspec>
 <paramspec name="EM_PROFILE" displayname="Provisioning profile" inappname=""></paramspec>
+<paramspec name="EM_STORE_VERSION" displayname="" inappname="" hidden="1"></paramspec>
+
 
 <!-- Params value:option map -->
 <!-- 'names': comma separated names of parameters -->
@@ -56,6 +60,7 @@ Configuration div example: (without formating for easy copy & paste)
 <optionvalue names="EM_HA_ID,EM_HA_DEST" values="0,1,2" options="App Store hockey;Beta hockey;Prepro hockey" ></optionvalue>
 <optionvalue names="EM_PROFILE" values="0,1,2" options="App Store;Ad Hoc;Devel" ></optionvalue>
 
+
 <!-- Dependencies -->
 <!-- 'dependencies': comma separated values, starts with most important --> 
 <!-- 'dependency': semicolon separated colon separated key:value -->
@@ -69,10 +74,13 @@ Configuration div example: (without formating for easy copy & paste)
 <dep name="EM_HA_ID" dependencies="BRANCH" BRANCH="DEV:1;UAT:2;RC:0;HF:2" ></dep>
 <dep name="EM_HA_DEST" dependencies="BRANCH" BRANCH="DEV:1;UAT:2;RC:0;HF:2" ></dep>
 <dep name="EM_PROFILE" dependencies="BRANCH" BRANCH="DEV:2;UAT:1;RC:0;HF:1" ></dep>
+<dep name="EM_STORE_VERSION" dependencies="STORE_VERSION_CHECK_ID" STORE_VERSION_CHECK_ID="true:1;false:0"></dep>
+
 
 <!-- Store configuration -->
 <!-- Settings for store configuration -->
 <storeconf params="EM_BA,EM_PA,EM_GA,EM_FA,EM_FB,EM_LG,EM_HA_ID,EM_HA_DEST,EM_PROFILE" values="0,0,0,0,0,0,0,0,0"></storeconf>
+
 
 </div>
 
@@ -96,12 +104,12 @@ var STORE_CONFIGURATION_MAP = {};
 jQuery(document).ready(function() {
 	setupParametersMap(); // create spec for every param in <paramspec> tag
 	hideScriptPropertiesNames(); // hides the rependencies and script fields
+	prepareCheckBoxDiv();
 	setupStoreConfigurationMap();
 	updateDisplayOptions(); /// replaces display name of values in select elements
 	setupDependenciesMap(); // map of all dependencies
 	assignEventsToDependencies();
 	updateParameterDisplayNames(); // replaces display names for parameters
-	prepareCheckBoxDiv();
 	createPresetButtons();
 
 	triggerFirstButton();
@@ -209,10 +217,15 @@ function setupDependenciesMap() {
 
 function assignEventsToDependencies() {
 	Object.keys(DEPENDENCIES_MAP).each(function(name){
+		// Explicit check for dynamically created elements
 		var element = getSelectForParameter(name);
+		if (name == sanitizedID(STORE_VERSION_CHECK_ID)) {
+			element = jQuery(STORE_VERSION_CHECK_ID);
+		}
 		element.attr("paramname", name);
 		element.change(onDependencyChange);
 		console.log("Assigned paramname " + name + " and onchange event for " + name + ":");
+		console.log(element);
 	});
 }
 
@@ -237,12 +250,19 @@ function createPresetButtons() {
 }
 
 function onDependencyChange(event) {
-	var select = event.target;
-	// Explicit check for BRANCH parameter
-	drawChecksIfNeeded(select);
-
-	var selectedValue = select.options[select.selectedIndex].text;
-	var parameterName = getParameterNameForSelect(select);
+	var element = event.target;
+	var selectedValue = "";
+	var parameterName = getParameterNameForElement(element);
+	// Explicit check for dynamically created elements
+	var id = element.getAttribute("id");
+	if (id && id == sanitizedID(STORE_VERSION_CHECK_ID)) {
+		selectedValue = element.checked;
+	} else {
+		// Explicit check for BRANCH parameter
+		drawChecksIfNeeded(element);
+		// Select element
+		selectedValue = element.options[element.selectedIndex].text;
+	}
 	updateDependenciesForParameterChange(parameterName, selectedValue);
 }
 
@@ -252,8 +272,7 @@ function updateDependenciesForParameterChange(parameterName, selectedValue) {
 	Object.keys(dependenciesForParam).each(function(key){
 		var dependencyMap = dependenciesForParam[key];
 		Object.keys(dependencyMap).each(function(depKey){
-			if (selectedValue.indexOf(depKey) >= 0) {
-				//console.log("Found " + key + " " + depKey + " for " + selectedValue);
+			if (selectedValue.toString().indexOf(depKey) >= 0) {
 				var select = getSelectForParameter(key);
 				var valueToSelect = dependencyMap[depKey].toString();
 				select.val(valueToSelect);
@@ -296,7 +315,7 @@ function prepareCheckBoxDiv() {
 }
 
 function drawChecksIfNeeded(element) {
-	if (getParameterNameForSelect(element) == "BRANCH") {
+	if (getParameterNameForElement(element) == "BRANCH") {
 		var select = jQuery("select[paramname=BRANCH]");
 		var drawStoreVersionCheck = select.find("option:selected").text().indexOf("RC") >= 0;
 		showStoreCheck(drawStoreVersionCheck);
@@ -367,7 +386,7 @@ function checkChanged(event) {
 	}
 }
 
-function getParameterNameForSelect(select) {
+function getParameterNameForElement(select) {
 	return select.getAttribute("paramname");
 }
 
@@ -390,3 +409,4 @@ function sanitizedID(id) {
 function triggerFirstButton() {
 	jQuery(PRESETS_DIV_ID).find("button").first().trigger("click");
 }
+

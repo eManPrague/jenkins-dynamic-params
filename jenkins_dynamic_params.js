@@ -87,14 +87,24 @@ Configuration div example: (without formating for easy copy & paste)
 */
 
 // Global params and constrants
+// Params
 var PARAMS_TO_HIDE = ["EMAN_DEPENDENCIES", "EMAN_MAIN_SCRIPT"];
+var EM_ACC_PARAM = "EM_STORE_ACC";
+var EM_PASS_PARAM = "EM_STORE_PASS";
+// Configuration
 var CONFIGURATION_DIV_ID = "#EMAN_CONFIGURATION_DIV";
+// Presets
 var PRESETS_DIV_ID = "#EMAN_PRESETS_DIV";
+// Store checks
 var CHECKBOX_DIV_ID = "#CHECKBOX_DIV_ID";
 var STORE_VERSION_CHECK_ID = "#STORE_VERSION_CHECK_ID";
 var STORE_UPLOAD_CHECK_ID = "#STORE_UPLOAD_CHECK_ID";
 var STORE_VERSION_CHECK_TITLE = "Store version <i>- original icon and no badge</i>";
-var STORE_UPLOAD_CHECK_TITLE = "Upload to the App Store";
+var STORE_UPLOAD_CHECK_TITLE = "Upload to the Store";
+// Store fields
+var STORE_ACC_FIELD_ID = "#STORE_ACC_FIELD_ID";
+var STORE_PASS_FIELD_ID = "#STORE_PASS_FIELD_ID";
+// Maps
 var PARAMETERS_MAP = {}; // map of parameters specs
 var DEPENDENCIES_MAP = {}; // map of <dep> tags from configuration div
 var PRESETS_MAP = {}; // map of <presetbutton> tags
@@ -200,13 +210,15 @@ function setupDependenciesMap() {
 		deps.reverse().map(function(attr){ 
 			var lowerCaseAttr = attr.toLowerCase();
 			var casesString = dep.getAttribute(lowerCaseAttr);
-			console.log("dependency " + attr + " has cases: " + casesString);
-			var cases = casesString.split(";"); // e.g. ["DEV:0", "UAT:1", ...]
 			var caseMap = {};
-			cases.map(function(c){
-				var split = c.split(":")
-				caseMap[split[0]] = split[1];
-			});
+			if (casesString != null) {
+				console.log("dependency " + attr + " has cases: " + casesString);
+				var cases = casesString.split(";"); // e.g. ["DEV:0", "UAT:1", ...]
+				cases.map(function(c){
+					var split = c.split(":")
+					caseMap[split[0]] = split[1];
+				});
+			}
 			if (DEPENDENCIES_MAP[attr] == null) { DEPENDENCIES_MAP[attr] = {}; };
 			DEPENDENCIES_MAP[attr][name] = caseMap;
 		});
@@ -221,6 +233,12 @@ function assignEventsToDependencies() {
 		var element = getSelectForParameter(name);
 		if (name == sanitizedID(STORE_VERSION_CHECK_ID)) {
 			element = jQuery(STORE_VERSION_CHECK_ID);
+		}
+		if (name == sanitizedID(STORE_ACC_FIELD_ID)) {
+			element = jQuery(STORE_ACC_FIELD_ID);
+		}
+		if (name == sanitizedID(STORE_PASS_FIELD_ID)) {
+			element = jQuery(STORE_PASS_FIELD_ID);
 		}
 		element.attr("paramname", name);
 		element.change(onDependencyChange);
@@ -260,8 +278,13 @@ function onDependencyChange(event) {
 	} else {
 		// Explicit check for BRANCH parameter
 		drawChecksIfNeeded(element);
-		// Select element
-		selectedValue = element.options[element.selectedIndex].text;
+		if (element.nodeName = "INPUT") {
+			// Acc or pass fields
+			selectedValue = element.value;
+		} else {
+			// Select element
+			selectedValue = element.options[element.selectedIndex].text;
+		}
 	}
 	updateDependenciesForParameterChange(parameterName, selectedValue);
 }
@@ -271,13 +294,21 @@ function updateDependenciesForParameterChange(parameterName, selectedValue) {
 	var dependenciesForParam = DEPENDENCIES_MAP[parameterName];
 	Object.keys(dependenciesForParam).each(function(key){
 		var dependencyMap = dependenciesForParam[key];
-		Object.keys(dependencyMap).each(function(depKey){
-			if (selectedValue.toString().indexOf(depKey) >= 0) {
-				var select = getSelectForParameter(key);
-				var valueToSelect = dependencyMap[depKey].toString();
-				select.val(valueToSelect);
-			};
-		});
+		if (parameterName == sanitizedID(STORE_ACC_FIELD_ID)) {
+			// Acc 
+			jQuery("input[value='" + key + "']").first().next().html(selectedValue);
+		} else if (parameterName == sanitizedID(STORE_PASS_FIELD_ID)) {
+			// Pass
+			jQuery("input[value='" + key + "']").first().next().attr("value", selectedValue);
+		} else {
+			Object.keys(dependencyMap).each(function(depKey){
+				if (selectedValue.toString().indexOf(depKey) >= 0) {
+					var select = getSelectForParameter(key);
+					var valueToSelect = dependencyMap[depKey].toString();
+					select.val(valueToSelect);
+				};
+			});
+		}
 	});
 }
 
@@ -294,24 +325,45 @@ function presetButtonClicked(event) {
 }
 
 function prepareCheckBoxDiv() {
+	// Container
 	var html = "<div id=" + sanitizedID(CHECKBOX_DIV_ID) + "></div>";
 	getSelectForParameter("BRANCH").parent().append(html);
 	var checkBoxDiv = jQuery(CHECKBOX_DIV_ID);
 
+	// Check boxes
 	var storeCheckID = sanitizedID(STORE_VERSION_CHECK_ID);
 	var uploadCheckID = sanitizedID(STORE_UPLOAD_CHECK_ID);
 
-	checkBoxDiv.append("<span style='display:block;'>");
+	checkBoxDiv.append("<span style='display:block;'></span>");
 	var checkBox1 = createCheck(storeCheckID, checkChanged);
 	checkBox1.appendTo(checkBoxDiv);
 	checkBoxDiv.append(labelHTMLwithText(STORE_VERSION_CHECK_TITLE, storeCheckID));
-	checkBoxDiv.append("</span>");
 
-	checkBoxDiv.append("<span style='display:block;'>");
+	checkBoxDiv.append("<span style='display:block;'></span>");
 	var checkBox2 = createCheck(uploadCheckID, checkChanged);
 	checkBox2.appendTo(checkBoxDiv);
 	checkBoxDiv.append(labelHTMLwithText(STORE_UPLOAD_CHECK_TITLE, uploadCheckID));
-	checkBoxDiv.append("</span>");
+
+	// Input fields
+	// Email
+	checkBoxDiv.append("<span style='display:block;'></span>");
+	checkBoxDiv.append(labelHTMLwithText("Account: ", sanitizedID(STORE_ACC_FIELD_ID)));
+	var email = jQuery("<input/>", {type:"email", id:sanitizedID(STORE_ACC_FIELD_ID), change:emailChanged});
+	email.appendTo(checkBoxDiv);
+
+	// Password
+	checkBoxDiv.append("<span style='display:block;'></span>");
+	checkBoxDiv.append(labelHTMLwithText("Password: ", sanitizedID(STORE_PASS_FIELD_ID)));
+	var pass = jQuery("<input/>", {type:"password", id:sanitizedID(STORE_PASS_FIELD_ID), change:passwordChanged});
+	pass.appendTo(checkBoxDiv);
+}
+
+function emailChanged(event) {
+	console.log("mail");
+}
+
+function passwordChanged(event) {
+	console.log("pass");
 }
 
 function drawChecksIfNeeded(element) {
@@ -320,6 +372,7 @@ function drawChecksIfNeeded(element) {
 		var drawStoreVersionCheck = select.find("option:selected").text().indexOf("RC") >= 0;
 		showStoreCheck(drawStoreVersionCheck);
 		showUploadCheck(false);
+		showAccFields(false);
 
 		storeCheck().prop("checked", false);
 		uploadCheck().prop("checked", false);
@@ -335,7 +388,7 @@ function createCheck(id, onchange) {
 }
 
 function labelHTMLwithText(text, id) {
-	return  "<label for=" + id + ">" + text + "</label>";
+	return  "<label style='min-width:70px;display:inline-block;' for=" + id + ">" + text + "</label>";
 }
 
 function storeLabel() {
@@ -364,6 +417,21 @@ function showUploadCheck(show) {
 	show ? uploadLabel().show() : uploadLabel().hide();
 }
 
+function showAccFields(show) {
+	var labelAcc = jQuery("label[for=" + sanitizedID(STORE_ACC_FIELD_ID) + "]");
+	var labelPass = jQuery("label[for=" + sanitizedID(STORE_PASS_FIELD_ID) + "]");
+	var fieldAcc = jQuery(STORE_ACC_FIELD_ID);
+	var fieldPass = jQuery(STORE_PASS_FIELD_ID);
+
+	show ? labelAcc.show() : labelAcc.hide();
+	show ? labelPass.show() : labelPass.hide();
+	show ? fieldAcc.show() : fieldAcc.hide();
+	show ? fieldPass.show() : fieldPass.hide();
+	// In any case clear the fields
+	fieldAcc.val("");
+	fieldPass.val("");
+}
+
 function checkChanged(event) {
 	var check = event.target;
 	var isUpload = check.getAttribute("id") == sanitizedID(STORE_UPLOAD_CHECK_ID);
@@ -377,6 +445,8 @@ function checkChanged(event) {
 			uploadCheck().trigger("change");
 		}
 	} else {
+		// Show/hide fields
+		showAccFields(check.checked);
 		// Set App Store configuration and disable controls
 		Object.keys(STORE_CONFIGURATION_MAP).each(function(key){
 			var select = getSelectForParameter(key);

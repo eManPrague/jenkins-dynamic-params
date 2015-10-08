@@ -186,7 +186,7 @@ function updateDisplayOptions() {
 			var select = getSelectForParameter(name);
 			jQuery.each(values, function(index, value){
 				var inappName = PARAMETERS_MAP[name]["inappname"];
-				var prefix = inappName == "" ? "" : inappName + index + " ";
+				var prefix = inappName == "" ? "" : inappName + value + " ";
 				select.find("option[value=" + value + "]").text(prefix + options[index]);
 			});
 		});

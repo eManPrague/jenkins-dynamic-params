@@ -11,7 +11,7 @@ needed configuration stuff from <div id="EMAN_CONFIGURATION_DIV">,
 therefore all configuration should be placed there.
 
 
-Configuration div example: (without formating for easy copy & paste)
+Configuration div example: (for easy copy & paste)
 --------------------------
 
 <div id="EMAN_CONFIGURATION_DIV">
@@ -19,11 +19,12 @@ Configuration div example: (without formating for easy copy & paste)
 <!-- Preset buttons -->
 <!-- 'title': button title -->
 <!-- 'params': semicolon separated colon separated param:value -->
+<!-- 'paramValue': actual value of the button -->
 
-<presetbutton title="DEV" params="BRANCH:DEV" ></presetbutton>
-<presetbutton title="UAT" params="BRANCH:UAT" ></presetbutton>
-<presetbutton title="RC" params="BRANCH:RC" ></presetbutton>
-<presetbutton title="HF" params="BRANCH:HF" ></presetbutton>
+<presetbutton title="DEV" paramValue="DEV" params="BRANCH:DEV" ></presetbutton>
+<presetbutton title="UAT" paramValue="UAT" params="BRANCH:UAT" ></presetbutton>
+<presetbutton title="RC" paramValue="RC" params="BRANCH:RC" ></presetbutton>
+<presetbutton title="HF" paramValue="HF" params="BRANCH:HF" ></presetbutton>
 
 
 <!-- Params names map -->
@@ -251,9 +252,10 @@ function createPresetButtons() {
 	jQuery(PRESETS_DIV_ID).html("");
 	jQuery(CONFIGURATION_DIV_ID).children("presetbutton").each(function(){
 		// Create button
-		var name = this.getAttribute("title");
+		var title = this.getAttribute("title");
+		var name = this.getAttribute("paramValue");
 		var params = this.getAttribute("params").split(";");
-		var button = jQuery("<button/>").text(name).click(presetButtonClicked);
+		var button = jQuery("<button/>").text(title).click(presetButtonClicked);
 		button.attr("buttonid", name);
 		// Cache stuff
 		var paramsMap = {};
@@ -479,4 +481,3 @@ function sanitizedID(id) {
 function triggerFirstButton() {
 	jQuery(PRESETS_DIV_ID).find("button").first().trigger("click");
 }
-
